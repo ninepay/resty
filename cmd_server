@@ -1,0 +1,47 @@
+#!/bin/bash
+
+declare -i DEBUG=0
+ROOT_DIR=$(cd "$(dirname $0)" && pwd)
+
+mkdir -p $ROOT_DIR/logs/nginx $ROOT_DIR/db/ssdb $ROOT_DIR/db/beanstalkd $ROOT_DIR/db/redis  $ROOT_DIR/tmp $ROOT_DIR/db/gateway $ROOT_DIR/db/loki $ROOT_DIR/db/promtail
+
+source $ROOT_DIR/bin/shell_func.sh
+
+case "$1" in
+
+_run_test)
+	shift
+	runOpenrestyTest $@
+	exit 0
+	;;
+_install_test)
+	shift
+	installOpenrestyTest $@
+	exit 0
+	;;
+_updateconf)
+	updateConfigs
+	exit 0
+	;;
+_tests)
+	runTests
+	exit $?
+	;;
+_update)
+	updateConfigs
+	$ROOT_DIR/bin/openresty/nginx/sbin/nginx -c $ROOT_DIR/tmp/nginx.conf -s reload
+	exit 0
+	;;
+redis)
+	shift
+	$ROOT_DIR/bin/redis/bin/redis-cli -s $ROOT_DIR/tmp/redis.sock $@
+	exit 0
+	;;
+nginx)
+	shift
+	$ROOT_DIR/bin/openresty/nginx/sbin/nginx -c $ROOT_DIR/tmp/nginx.conf $@
+	exit $?
+	;;
+esac
+updateConfigs
+$ROOT_DIR/bin/python_env/gbc/bin/supervisorctl -c $ROOT_DIR/tmp/supervisord.conf $@
